@@ -1,0 +1,126 @@
+### Enter code Vittorio & Rita (tasks 1 & 2)
+
+### TASK 4. Temporal frequency and orientation analysis
+## Temporal frequency
+
+temporal_freqs = np.unique(df_par['temporal_frequency_in_Hz'])
+
+# Tuning matrices for temporal frequency
+temporal_matrici = {}
+for tf in temporal_freqs:
+    rows_tf = df_par.index[df_par['temporal_frequency_in_Hz'] == tf].tolist()
+
+# Create matrix
+    mat_tf = np.zeros((resp.shape[0], len(directions_sorted)))
+
+    for i, dir_ in enumerate(directions_sorted):
+        cols_dir_tf = df_par.index[
+            (df_par['temporal_frequency_in_Hz'] == tf) & 
+            (df_par['direction_in_degrees'] == dir_)
+        ].tolist()
+
+        mat_tf[:, i] = df_resp.iloc[:, cols_dir_tf].mean(axis=1)
+
+    temporal_matrici[tf] = mat_tf
+
+# Preferred direction and DSI for temporal frequencies
+preferred_direction_tf = {}
+DSI_tf = {}
+
+for tf in temporal_freqs:
+    mat_tf = temporal_matrici[tf]
+    preferred_direction_tf[tf] = np.zeros(mat_tf.shape[0])
+    DSI_tf[tf] = np.zeros(mat_tf.shape[0])
+
+    for neuron in range(mat_tf.shape[0]):
+       r = mat[neuron, :]
+       vec_sum = np.sum(r * np.exp(1j * np.deg2rad(directions_sorted)))
+       pref = np.rad2deg(np.angle(vec_sum)) % 360
+       preferred_direction_tf[tf][neuron] = pref
+
+       DSI_tf[tf][neuron] = np.abs(vec_sum) / np.sum(r)
+
+print("Temporal frequency preferred directions + DSI computed.")
+
+# histogram of preferred directions for temporal frequency 
+
+for tf in temporal_freqs:
+    plt.figure(figsize=(12, 5))
+
+    # Preferred directions histogram for temporal frequency
+    plt.subplot(1, 2, 1)
+    plt.hist(preferred_direction_tf[tf], bins=30, edgecolor='black')
+    plt.title(f'Preferred Directions Histogram (TF={tf} Hz)')
+    plt.xlabel('Preferred Direction (degrees)')
+    plt.ylabel('Number of Neurons')
+    plt.grid(True)
+
+    # DSI histogram for temporal frequency
+    plt.subplot(1, 2, 2)
+    plt.hist(DSI_tf[tf], bins=30, edgecolor='black')
+    plt.axvline(x=0.3, color='red', linestyle='--')
+    plt.title(f'Direction Selectivity Index (DSI) Histogram (TF={tf} Hz)')
+    plt.xlabel('DSI')
+    plt.ylabel('Number of Neurons')
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+## Orientation analysis
+# Extract orientations from directions
+orientations = (directions_sorted + 90) % 180
+orientations_rad = np.deg2rad(orientations)
+
+orientation_matrici = {}
+
+for sf in spatial_freqs:
+    mat = matrici[sf] # already computed matrix for spatial frequency
+    orientation_matrici[sf] = mat # same matrix, reinterpret directions as orientations
+
+preferred_orientation = {}
+OSI = {}
+
+for sf in spatial_freqs:
+    mat = orientation_matrici[sf]
+    preferred_orientation[sf] = np.zeros(mat.shape[0])
+    OSI[sf] = np.zeros(mat.shape[0])
+
+    for neuron in range(mat.shape[0]):
+        r = mat[neuron, :]
+
+        # complex vector sum
+        vec_sum = np.sum(r * np.exp(2j * 2 * orientations_rad))
+
+        # orientation angle (half of the complex vector angle)
+        ori = (0.5 * np.rad2deg(np.angle(vec_sum))) % 180
+        preferred_orientation[sf][neuron] = ori
+
+        OSI[sf][neuron] = np.abs(vec_sum) / np.sum(r)
+
+print("Orientation preferred angles + OSI computed.")
+
+# Orientation histograms
+
+for sf in spatial_freqs:
+    plt.figure(figsize=(12, 5))
+
+     # Preferred Orientation Histogram
+     plt.subplot(1, 2, 1)
+     plt.hist(preferred_orientation[sf], bins=30, edgecolor='black')
+     plt.title(f'Preferred Orientations Histogram (SF={sf})')
+     plt.xlabel('Preferred Orientation (°)')
+     plt.ylabel('Number of Neurons')
+     plt.grid(True)
+
+     # OSI Histogram
+     plt.subplot(1, 2, 2)
+     plt.hist(OSI[sf], bins=30, edgecolor='black')
+     plt.axvline(0.3, color='red', linestyle='--')
+     plt.title(f'Orientation Selectivity Index (OSI) Histogram (SF={sf})')
+     plt.xlabel('OSI')
+     plt.ylabel('Number of Neurons')
+     plt.grid(True)
+
+     plt.tight_layout()
+     plt.show()
